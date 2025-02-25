@@ -29,6 +29,21 @@ struct Compare
         return a->freq > b->freq;
     }
 };
+void read_bin()
+{
+    ifstream inFile("test.bin", ios::binary);
+    char ch;
+    while (inFile.get(ch))
+    {
+
+        for (int i = 7; i >= 0; i--)
+        {
+            bool bin = (1 << i) & (ch);
+            cout << bin;
+        }
+        cout << " ";
+    }
+}
 
 void getHuffmanCode(Node *root, string s, unordered_map<char, string> &huffman_codes)
 {
@@ -56,7 +71,56 @@ void deleteTree(Node *root)
     deleteTree(root->right);
     delete root;
 }
-void encode_file(unordered_map<char, string> huffman_code)
+void encode_huffman_tree(Node *root, ofstream &outFile, int8_t &buffer, int &bitcount)
+{
+    if (bitcount == 8)
+    {
+        outFile.put(buffer);
+        buffer = 0;
+        bitcount = 0;
+    }
+    if (!root)
+    {
+        return;
+    }
+    if (!root->left && !root->left)
+    {
+        buffer = buffer << 1 | (1);
+        bitcount++;
+        if (bitcount == 8)
+        {
+            outFile.put(buffer);
+            buffer = 0;
+            bitcount = 0;
+        }
+        char ch = root->ch;
+        cout<<ch<<" ";
+        for (int i = 7; i >= 0; i--)
+        {
+            buffer = (buffer << 1) | ((ch>>i) & (1));
+            cout << ((ch >> i) & 1);
+            bitcount++;
+            if (bitcount == 8)
+            {
+
+                outFile.put(buffer);
+                buffer = 0;
+                bitcount = 0;
+            }
+        }
+        cout<<endl;
+        return;
+    }
+    else{
+        buffer = buffer << 1 | (0);
+        bitcount++;
+    }
+
+    encode_huffman_tree(root->left, outFile, buffer, bitcount);
+
+    encode_huffman_tree(root->right, outFile, buffer, bitcount);
+}
+void encode_file(unordered_map<char, string> huffman_code, Node *root)
 {
     ofstream outFile("test.bin", ios::binary);
     if (!outFile)
@@ -74,6 +138,20 @@ void encode_file(unordered_map<char, string> huffman_code)
     int8_t buffer = 0;
     int bitcount = 0;
     string encoded_test = "";
+
+    encode_huffman_tree(root, outFile, buffer, bitcount);
+    if (bitcount > 0)
+    {
+
+        buffer = (buffer << (8 - bitcount));
+        bitcount = 0;
+        outFile.put(buffer);
+    }
+    buffer = 0;
+    bitcount = 0;
+    outFile.put('@');
+    outFile.put('#');
+    outFile.put('$');
     while (inFile.get(ch))
     {
         string code = huffman_code[ch];
@@ -81,13 +159,11 @@ void encode_file(unordered_map<char, string> huffman_code)
         {
             buffer = (buffer << 1) | (bc - '0');
 
-
             encoded_test += to_string(bc - '0');
 
             bitcount++;
             if (bitcount == 8)
             {
-            cout<<static_cast<int>(buffer)<<" ";
 
                 outFile.put(buffer);
                 buffer = 0;
@@ -99,7 +175,6 @@ void encode_file(unordered_map<char, string> huffman_code)
     {
 
         buffer = (buffer << (8 - bitcount));
-        cout<<static_cast<int>(buffer)<<" ";
         bitcount = 0;
         outFile.put(buffer);
     }
@@ -181,7 +256,9 @@ int main()
         cout<<i.first<<" "<<i.second<<endl;
 
     }
-    encode_file(huffman_codes);
-    decode_file(pq.top(),"test.bin");
+    encode_file(huffman_codes, pq.top());
+    read_bin();
+
+    // decode_file(pq.top(),"test.bin");
     return 0;
 }
