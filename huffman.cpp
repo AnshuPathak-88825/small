@@ -29,22 +29,20 @@ struct Compare
         return a->freq > b->freq;
     }
 };
-void read_bin()
+void read_bin(ifstream &inFile)
 {
-    ifstream inFile("test.bin", ios::binary);
     char ch;
     while (inFile.get(ch))
     {
-
         for (int i = 7; i >= 0; i--)
         {
             bool bin = (1 << i) & (ch);
-            cout << bin;
+            // cout << bin;
+            // cout << "";
         }
-        cout << " ";
+        // cout << " ";
     }
 }
-
 void getHuffmanCode(Node *root, string s, unordered_map<char, string> &huffman_codes)
 {
     if (!root)
@@ -94,11 +92,9 @@ void encode_huffman_tree(Node *root, ofstream &outFile, int8_t &buffer, int &bit
             bitcount = 0;
         }
         char ch = root->ch;
-        cout<<ch<<" ";
         for (int i = 7; i >= 0; i--)
         {
-            buffer = (buffer << 1) | ((ch>>i) & (1));
-            cout << ((ch >> i) & 1);
+            buffer = (buffer << 1) | ((ch >> i) & (1));
             bitcount++;
             if (bitcount == 8)
             {
@@ -108,10 +104,10 @@ void encode_huffman_tree(Node *root, ofstream &outFile, int8_t &buffer, int &bit
                 bitcount = 0;
             }
         }
-        cout<<endl;
         return;
     }
-    else{
+    else
+    {
         buffer = buffer << 1 | (0);
         bitcount++;
     }
@@ -125,13 +121,13 @@ void encode_file(unordered_map<char, string> huffman_code, Node *root)
     ofstream outFile("test.bin", ios::binary);
     if (!outFile)
     {
-        cout << "error while opening the file";
+        // cout << "error while opening the file";
         return;
     }
     ifstream inFile("big.txt");
     if (!inFile)
     {
-        cout << "Error in loading file\n";
+        // cout << "Error in loading file\n";
         return;
     }
     char ch;
@@ -152,11 +148,13 @@ void encode_file(unordered_map<char, string> huffman_code, Node *root)
     outFile.put('@');
     outFile.put('#');
     outFile.put('$');
+    int count=0;
     while (inFile.get(ch))
     {
         string code = huffman_code[ch];
         for (auto bc : code)
         {
+            // cout<<count++<<" ";
             buffer = (buffer << 1) | (bc - '0');
 
             encoded_test += to_string(bc - '0');
@@ -181,32 +179,107 @@ void encode_file(unordered_map<char, string> huffman_code, Node *root)
     inFile.close();
     outFile.close();
 }
-void decode_file(Node *root, const string &encoded_file)
-{
-    ifstream Infile("test.bin",ios::binary);
-    ofstream decoded_file("decoded.txt",ios::binary);
-    if(!Infile)
-    {
-        cout<<"Error in binary bin file during  decoding_file";
+bool checkStopSequence(ifstream &inFile) {
+    streampos pos = inFile.tellg();
+    unsigned char first = inFile.get();
+    unsigned char second = inFile.get();
+    unsigned char third = inFile.get();
+    
+    if (inFile.eof()) {
+        return false;
     }
-    char bytes;
-    Node *temp=root;
-    while(Infile.get(bytes))
+    // cout<<first<<" "<<second<<" "<<third<<endl;
+    if (first == '@' && second == '#' && third == '$') {
+        // cout<<"hello";
+        return true; 
+    }
+    
+    inFile.seekg(pos, ios::beg); 
+    return false;
+}
+bool getNextBit(ifstream &inFile, char &buffer, int &bit_count)
+{
+    if (bit_count == 8)
     {
-        if(Infile.peek()==EOF)
+        if (checkStopSequence(inFile))
         {
-            
+            throw runtime_error("Stop sequence detected. Stopping tree creation.");
         }
-        for(int i=7;i>=0;i--)
+        char newbyte = inFile.get();
+        if (newbyte == EOF)
         {
-            if(!temp->left&&!temp->right)
+            throw "Unexpected end of file while reading bits.";
+        }
+        buffer = newbyte;
+        bit_count = 0;
+    }
+    bool value = (buffer >> (7 - bit_count)) & 1;
+    bit_count++;
+    return value;
+}
+char extractCharacter(ifstream &inFile, int &bit_count, char &buffer)
+{
+    unsigned char c = 0;
+    for (int i = 0; i < 8; i++)
+    {
+        c = (c << 1) | getNextBit(inFile, buffer, bit_count);
+    }
+    return c;
+}
+Node *Create_Tree(ifstream &inFile, int &bit_count, char &buffer)
+{
+    bool value = getNextBit(inFile, buffer, bit_count);
+    if (value == 1)
+    {
+        unsigned char ch = extractCharacter(inFile, bit_count, buffer);
+        Node *leaf = new Node(static_cast<char>(ch), 0);
+        return leaf;
+    }
+    else
+    {
+
+        Node *root = new Node('\0', 0);
+        root->left = Create_Tree(inFile, bit_count, buffer);
+        root->right = Create_Tree(inFile, bit_count, buffer);
+        return root;
+    }
+}
+void decode_file(const string &encoded_file)
+{
+    ifstream Infile("test.bin", ios::binary);
+    ofstream decoded_file("decoded.txt", ios::binary);
+    if (!Infile)
+    {
+        // cout << "Error in binary bin file during  decoding_file";
+    }
+    int bit_count = 0;
+    char buffer = Infile.get();
+    Node *root = Create_Tree(Infile, bit_count, buffer);
+    unordered_map<char, string> huffman_codes;
+    char bytes;
+    Node *temp = root;
+    Infile.get();
+    Infile.get();
+    Infile.get();
+    
+    while (Infile.get(bytes))
+    {
+        if (Infile.peek() == EOF)
+        {
+        }
+        for (int i = 7; i >= 0; i--)
+        {
+            temp = (bytes & (1 << i)) ? temp->right : temp->left;
+
+            if (!temp->left && !temp->right)
             {
                 decoded_file.put(temp->ch);
-                temp=root;
+                temp = root;
             }
-           temp=(bytes&(1<<i))?temp->right:temp->left;
         }
     }
+    Infile.close();
+    decoded_file.close();
 }
 
 int main()
@@ -214,7 +287,7 @@ int main()
     ifstream inFile("big.txt");
     if (!inFile)
     {
-        cout << "Error in loading file\n";
+        // cout << "Error in loading file\n";
         return 0;
     }
 
@@ -251,14 +324,11 @@ int main()
     unordered_map<char, string> huffman_codes;
 
     getHuffmanCode(pq.top(), "", huffman_codes);
-    for(auto i:huffman_codes)
+    for (auto i : huffman_codes)
     {
-        cout<<i.first<<" "<<i.second<<endl;
-
+        // cout << i.first << " " << i.second << endl;
     }
     encode_file(huffman_codes, pq.top());
-    read_bin();
-
-    // decode_file(pq.top(),"test.bin");
+    decode_file("test.bin");
     return 0;
 }
