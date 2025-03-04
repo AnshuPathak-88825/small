@@ -37,10 +37,7 @@ void read_bin(ifstream &inFile)
         for (int i = 7; i >= 0; i--)
         {
             bool bin = (1 << i) & (ch);
-            // cout << bin;
-            // cout << "";
         }
-        // cout << " ";
     }
 }
 void getHuffmanCode(Node *root, string s, unordered_map<char, string> &huffman_codes)
@@ -121,13 +118,13 @@ void encode_file(unordered_map<char, string> huffman_code, Node *root)
     ofstream outFile("test.bin", ios::binary);
     if (!outFile)
     {
-        // cout << "error while opening the file";
+        cout << "error while opening the file";
         return;
     }
     ifstream inFile("big.txt");
     if (!inFile)
     {
-        // cout << "Error in loading file\n";
+        cout << "Error in loading file\n";
         return;
     }
     char ch;
@@ -154,7 +151,6 @@ void encode_file(unordered_map<char, string> huffman_code, Node *root)
         string code = huffman_code[ch];
         for (auto bc : code)
         {
-            // cout<<count++<<" ";
             buffer = (buffer << 1) | (bc - '0');
 
             encoded_test += to_string(bc - '0');
@@ -188,9 +184,7 @@ bool checkStopSequence(ifstream &inFile) {
     if (inFile.eof()) {
         return false;
     }
-    // cout<<first<<" "<<second<<" "<<third<<endl;
     if (first == '@' && second == '#' && third == '$') {
-        // cout<<"hello";
         return true; 
     }
     
@@ -250,7 +244,7 @@ void decode_file(const string &encoded_file)
     ofstream decoded_file("decoded.txt", ios::binary);
     if (!Infile)
     {
-        // cout << "Error in binary bin file during  decoding_file";
+        cout << "Error in binary bin file during  decoding_file";
     }
     int bit_count = 0;
     char buffer = Infile.get();
@@ -287,7 +281,7 @@ int main()
     ifstream inFile("big.txt");
     if (!inFile)
     {
-        // cout << "Error in loading file\n";
+        cout << "Error in loading file\n";
         return 0;
     }
 
@@ -324,10 +318,6 @@ int main()
     unordered_map<char, string> huffman_codes;
 
     getHuffmanCode(pq.top(), "", huffman_codes);
-    for (auto i : huffman_codes)
-    {
-        // cout << i.first << " " << i.second << endl;
-    }
     encode_file(huffman_codes, pq.top());
     decode_file("test.bin");
     return 0;
